@@ -404,23 +404,26 @@
                 let statusText = "";
                 
                 // 計算 X 軸偏移 -> 控制 Y 軸旋轉 (左右轉)
-                // 注意：相機視角下，手往右(x增大) -> 物體應該往右轉
+                // 反轉邏輯：手往左 (x 小) -> 往右轉 (+=)
+                // 反轉邏輯：手往右 (x 大) -> 往左轉 (-=)
                 if (x < centerX - threshold) {
-                    gestureRotateY = -0.05; // 向左
+                    gestureRotateY = 0.05; // 往左(數值小)，物體逆時針
                     statusText += "向左轉 ";
                 } else if (x > centerX + threshold) {
-                    gestureRotateY = 0.05; // 向右
+                    gestureRotateY = -0.05; // 往右(數值大)，物體順時針
                     statusText += "向右轉 ";
                 } else {
                     gestureRotateY = 0;
                 }
 
                 // 計算 Y 軸偏移 -> 控制 X 軸旋轉 (上下轉)
+                // 反轉邏輯：手往上 (y 小) -> 往上轉 (+=)
+                // 反轉邏輯：手往下 (y 大) -> 往下轉 (-=)
                 if (y < centerY - threshold) {
-                    gestureRotateX = -0.05; // 向上
+                    gestureRotateX = 0.05; // 往上
                     statusText += "向上轉";
                 } else if (y > centerY + threshold) {
-                    gestureRotateX = 0.05; // 向下
+                    gestureRotateX = -0.05; // 往下
                     statusText += "向下轉";
                 } else {
                     gestureRotateX = 0;
@@ -515,10 +518,11 @@
         }
 
         const rotateStep = 0.15;
-        document.getElementById('btn-left').addEventListener('click', () => { stopAutoRotate(); pivotGroup.rotation.y -= rotateStep; });
-        document.getElementById('btn-right').addEventListener('click', () => { stopAutoRotate(); pivotGroup.rotation.y += rotateStep; });
-        document.getElementById('btn-up').addEventListener('click', () => { stopAutoRotate(); pivotGroup.rotation.x -= rotateStep; });
-        document.getElementById('btn-down').addEventListener('click', () => { stopAutoRotate(); pivotGroup.rotation.x += rotateStep; });
+        // 反轉按鈕邏輯：左/右互換加減，上/下互換加減
+        document.getElementById('btn-left').addEventListener('click', () => { stopAutoRotate(); pivotGroup.rotation.y += rotateStep; });
+        document.getElementById('btn-right').addEventListener('click', () => { stopAutoRotate(); pivotGroup.rotation.y -= rotateStep; });
+        document.getElementById('btn-up').addEventListener('click', () => { stopAutoRotate(); pivotGroup.rotation.x += rotateStep; });
+        document.getElementById('btn-down').addEventListener('click', () => { stopAutoRotate(); pivotGroup.rotation.x -= rotateStep; });
 
         const btnAuto = document.getElementById('btn-auto');
         btnAuto.addEventListener('click', () => {
