@@ -325,7 +325,7 @@
         controls.maxDistance = 20;
 
         // ------------------------------------------------------------------
-        // Part 2: 手勢控制邏輯 (新增部分)
+        // Part 2: 手勢控制邏輯
         // ------------------------------------------------------------------
         
         let isAutoRotating = true;
@@ -388,24 +388,17 @@
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                 const landmarks = results.multiHandLandmarks[0];
                 
-                // 取手腕(0)或中指根部(9)作為基準點
-                // MediaPipe 的座標是 0.0 ~ 1.0 (正規化座標)
-                // x: 0 (左) -> 1 (右), y: 0 (上) -> 1 (下)
-                // 但因為影片有鏡像 (CSS scaleX(-1))，所以邏輯要反過來思考視覺效果
-                // 實際上我們只看數值:
+                // 取中指根部(9)作為基準點
                 const x = landmarks[9].x; 
                 const y = landmarks[9].y;
 
-                // 定義中心區域 (Deadzone)
                 const centerX = 0.5;
                 const centerY = 0.5;
-                const threshold = 0.1; // 靈敏度死區
+                const threshold = 0.1;
 
                 let statusText = "";
                 
-                // 計算 X 軸偏移 -> 控制 Y 軸旋轉 (左右轉)
-                // 反轉邏輯：手往左 (x 小) -> 往右轉 (+=)
-                // 反轉邏輯：手往右 (x 大) -> 往左轉 (-=)
+                // 計算 X 軸偏移 (控制左右旋轉)
                 if (x < centerX - threshold) {
                     gestureRotateY = 0.05; // 往左(數值小)，物體逆時針
                     statusText += "向左轉 ";
@@ -416,9 +409,7 @@
                     gestureRotateY = 0;
                 }
 
-                // 計算 Y 軸偏移 -> 控制 X 軸旋轉 (上下轉)
-                // 反轉邏輯：手往上 (y 小) -> 往上轉 (+=)
-                // 反轉邏輯：手往下 (y 大) -> 往下轉 (-=)
+                // 計算 Y 軸偏移 (控制上下旋轉)
                 if (y < centerY - threshold) {
                     gestureRotateX = 0.05; // 往上
                     statusText += "向上轉";
@@ -431,29 +422,25 @@
 
                 if (statusText === "") statusText = "保持不動";
                 gestureStatus.innerText = statusText;
-                gestureStatus.style.color = "#4ade80"; // 綠色表示偵測到
+                gestureStatus.style.color = "#4ade80";
 
             } else {
-                // 沒偵測到手
                 gestureRotateX = 0;
                 gestureRotateY = 0;
                 gestureStatus.innerText = "未偵測到手部";
-                gestureStatus.style.color = "#f87171"; // 紅色
+                gestureStatus.style.color = "#f87171";
             }
         }
 
         function toggleGestureMode() {
             if (!isGestureMode) {
-                // 開啟
                 initHands();
             } else {
-                // 關閉
                 if (cameraObj) {
-                    // cameraObj.stop() 目前 MediaPipe JS 版不一定好用，我們隱藏 UI 並停止處理
                     document.getElementById('webcam-container').style.display = 'none';
                     videoElement.pause();
-                    videoElement.srcObject.getTracks().forEach(t => t.stop()); // 真正關閉鏡頭
-                    cameraObj = null; // 重置
+                    videoElement.srcObject.getTracks().forEach(t => t.stop());
+                    cameraObj = null;
                     hands = null;
                 }
                 isGestureMode = false;
@@ -461,7 +448,6 @@
                 gestureRotateY = 0;
                 updateGestureButtonUI();
                 
-                // 恢復自動旋轉
                 isAutoRotating = true;
                 document.getElementById('btn-auto').style.color = '#facc15';
             }
@@ -484,20 +470,37 @@
         document.getElementById('btn-gesture-toggle').addEventListener('click', toggleGestureMode);
 
         // ------------------------------------------------------------------
-        // Part 3: 動畫循環與一般 UI 事件
+        // Part 3: 動畫循環與核心旋轉邏輯 (修正部分)
         // ------------------------------------------------------------------
+
+        // 核心旋轉函數：確保旋轉軸是相對於「螢幕/相機」的，而非物體自身的局部軸
+        function rotateObject(dx, dy) {
+            // dx: 水平旋轉量 (繞世界 Y 軸)
+            // dy: 垂直旋轉量 (繞相機右方軸)
+
+            // 1. 水平旋轉：繞著世界 Y 軸轉 (讓物體保持直立旋轉，不歪斜)
+            if (dx !== 0) {
+                pivotGroup.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), dx);
+            }
+
+            // 2. 垂直旋轉：繞著「相機的右方軸」轉 (解決視角偏移問題)
+            if (dy !== 0) {
+                // 取得目前相機的右方向量
+                const camRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                // 使用 normalize 確保向量長度正確
+                pivotGroup.rotateOnWorldAxis(camRight.normalize(), dy);
+            }
+        }
 
         function animate() {
             requestAnimationFrame(animate);
 
             if (isGestureMode) {
-                // 手勢模式優先
-                pivotGroup.rotation.y += gestureRotateY;
-                pivotGroup.rotation.x += gestureRotateX;
+                // 手勢模式：使用新的 View-Dependent 旋轉邏輯
+                rotateObject(gestureRotateY, gestureRotateX);
             } else if (isAutoRotating) {
-                // 自動旋轉
-                pivotGroup.rotation.y += 0.005;
-                pivotGroup.rotation.x += 0.001; 
+                // 自動旋轉：稍微轉一點 Y 和 X
+                rotateObject(0.005, 0.001);
             }
 
             controls.update();
@@ -518,15 +521,16 @@
         }
 
         const rotateStep = 0.15;
-        // 反轉按鈕邏輯：左/右互換加減，上/下互換加減
-        document.getElementById('btn-left').addEventListener('click', () => { stopAutoRotate(); pivotGroup.rotation.y += rotateStep; });
-        document.getElementById('btn-right').addEventListener('click', () => { stopAutoRotate(); pivotGroup.rotation.y -= rotateStep; });
-        document.getElementById('btn-up').addEventListener('click', () => { stopAutoRotate(); pivotGroup.rotation.x += rotateStep; });
-        document.getElementById('btn-down').addEventListener('click', () => { stopAutoRotate(); pivotGroup.rotation.x -= rotateStep; });
+        // 按鈕控制也改用 rotateObject 確保邏輯一致
+        // 左/右: 傳入 dx
+        document.getElementById('btn-left').addEventListener('click', () => { stopAutoRotate(); rotateObject(rotateStep, 0); });
+        document.getElementById('btn-right').addEventListener('click', () => { stopAutoRotate(); rotateObject(-rotateStep, 0); });
+        // 上/下: 傳入 dy
+        document.getElementById('btn-up').addEventListener('click', () => { stopAutoRotate(); rotateObject(0, rotateStep); });
+        document.getElementById('btn-down').addEventListener('click', () => { stopAutoRotate(); rotateObject(0, -rotateStep); });
 
         const btnAuto = document.getElementById('btn-auto');
         btnAuto.addEventListener('click', () => {
-            // 如果在手勢模式下，按 AUTO 應該先關閉手勢模式，或忽略
             if (isGestureMode) {
                 alert("請先關閉手勢模式才能啟用自動旋轉");
                 return;
@@ -550,9 +554,10 @@
         document.getElementById('btn-reset').addEventListener('click', () => {
             camera.position.set(5, 4, 5);
             camera.lookAt(0, 0, 0);
-            pivotGroup.rotation.set(0, 0, 0);
             
-            // 如果正在手勢模式，不強制切回自動，但重置角度
+            // 重置物體旋轉 (使用 quaternion identity)
+            pivotGroup.quaternion.identity();
+            
             if (!isGestureMode) {
                 isAutoRotating = true;
                 btnAuto.style.color = '#facc15';
