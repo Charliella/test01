@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D 多形體檢視器 (手勢控制版)</title>
+    <title>3D 多形體檢視器</title>
     <!-- Tailwind CSS 用於快速樣式設計 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { margin: 0; overflow: hidden; background-color: #111; color: white; font-family: 'Noto Sans TC', sans-serif; }
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 0; }
-        
         /* 自定義按鈕樣式 */
         .ctrl-btn {
             background-color: rgba(31, 41, 55, 0.8);
@@ -24,7 +23,6 @@
         .ctrl-btn:active {
             transform: scale(0.95);
         }
-        
         /* 下拉選單樣式 */
         select {
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
@@ -35,52 +33,7 @@
             -webkit-print-color-adjust: exact;
             appearance: none;
         }
-
-        /* 視訊預覽視窗樣式 */
-        #webcam-container {
-            position: absolute;
-            bottom: 120px; /* 避開底部控制列 */
-            right: 20px;
-            width: 240px;
-            height: 180px;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 2px solid #3b82f6;
-            background: #000;
-            display: none; /* 預設隱藏 */
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            z-index: 20;
-            transform: scaleX(-1); /* 鏡像顯示 */
-        }
-        
-        /* 手勢狀態指示器 */
-        #gesture-status {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(50%) scaleX(-1); /* 文字要轉回來 */
-            background: rgba(0, 0, 0, 0.6);
-            color: #fff;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            pointer-events: none;
-        }
-
-        /* 載入中遮罩 */
-        #loading-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
-            z-index: 50;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            flex-direction: column;
-        }
     </style>
-    
     <!-- 引入 Three.js -->
     <script type="importmap">
         {
@@ -90,30 +43,11 @@
             }
         }
     </script>
-
-    <!-- 引入 MediaPipe Hands 與 Camera Utils -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-
 </head>
 <body>
 
     <!-- 3D 畫布容器 -->
     <div id="canvas-container"></div>
-
-    <!-- 載入提示 -->
-    <div id="loading-overlay">
-        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-        <p>正在啟動相機模組...</p>
-    </div>
-
-    <!-- 視訊預覽區域 -->
-    <div id="webcam-container">
-        <video id="webcam-video" style="width:100%; height:100%; object-fit: cover;"></video>
-        <div id="gesture-status">等待手勢...</div>
-    </div>
 
     <!-- UI 介面層 -->
     <div class="absolute top-0 left-0 w-full h-full pointer-events-none z-10 flex flex-col justify-between">
@@ -123,7 +57,7 @@
             <div>
                 <h1 class="text-2xl md:text-3xl font-bold text-blue-400 mb-1 drop-shadow-md">3D 多形體檢視器</h1>
                 <p class="text-gray-300 text-xs md:text-sm opacity-90 hidden md:block">
-                    左鍵：旋轉 | 右鍵：平移 | 滾輪：縮放 | <span class="text-yellow-400">新功能：手勢控制</span>
+                    左鍵：旋轉 | 右鍵：平移 | 滾輪：縮放
                 </p>
             </div>
             
@@ -155,7 +89,7 @@
 
         <!-- 控制面板 (底部) -->
         <div class="pointer-events-auto bg-gray-900/90 backdrop-blur-sm border-t border-gray-700 p-4 pb-8">
-            <div class="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
                 
                 <!-- 旋轉控制區 -->
                 <div class="flex items-center gap-2">
@@ -186,7 +120,7 @@
                 <!-- 分隔線 -->
                 <div class="hidden md:block w-px h-12 bg-gray-700 mx-2"></div>
 
-                <!-- 中間：縮放與重置 -->
+                <!-- 縮放與重置區 -->
                 <div class="flex items-center gap-3 w-full md:w-auto justify-center">
                     <button id="btn-zoom-in" class="ctrl-btn text-white px-4 py-2 rounded flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" /></svg>
@@ -200,21 +134,6 @@
                         重置
                     </button>
                 </div>
-
-                <!-- 分隔線 -->
-                <div class="hidden md:block w-px h-12 bg-gray-700 mx-2"></div>
-
-                <!-- 右側：手勢控制開關 -->
-                <div class="flex items-center">
-                    <button id="btn-gesture-toggle" class="ctrl-btn bg-indigo-600/50 border-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded flex items-center gap-2 shadow-lg shadow-indigo-500/20">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-                        </svg>
-                        <span id="gesture-btn-text">開啟手勢</span>
-                    </button>
-                </div>
-
             </div>
         </div>
     </div>
@@ -223,10 +142,7 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // ------------------------------------------------------------------
-        // Part 1: Three.js 初始化與場景建置 (延續之前的功能)
-        // ------------------------------------------------------------------
-
+        // 1. 初始化場景
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0f172a);
@@ -241,9 +157,12 @@
         renderer.shadowMap.enabled = true;
         container.appendChild(renderer.domElement);
 
+        // 用於放置當前模型的群組
         const pivotGroup = new THREE.Group();
         scene.add(pivotGroup);
 
+        // 2. 共用材質
+        // 實體材質
         const material = new THREE.MeshPhysicalMaterial({
             color: 0x3b82f6,
             metalness: 0.1,
@@ -251,57 +170,106 @@
             clearcoat: 1.0,
             clearcoatRoughness: 0.1,
             flatShading: true,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide // 確保看到內部不會穿幫
         });
         
+        // 邊框線材質
         const lineMaterial = new THREE.LineBasicMaterial({ color: 0xa5f3fc, linewidth: 2 });
 
+        // 3. 創建形狀的函數
         let currentMesh = null;
         let currentWireframe = null;
 
         function createShape(type) {
+            // 清除舊模型
             if (currentMesh) {
                 pivotGroup.remove(currentMesh);
                 currentMesh.geometry.dispose();
             }
 
             let geometry;
+            // 基礎尺寸參數
             const radius = 1.5;
             const height = 2.5;
 
             switch(type) {
-                case 'pyramid3': geometry = new THREE.ConeGeometry(radius, height, 3); break;
-                case 'pyramid4': geometry = new THREE.ConeGeometry(radius, height, 4); break;
-                case 'pyramid5': geometry = new THREE.ConeGeometry(radius, height, 5); break;
-                case 'pyramid6': geometry = new THREE.ConeGeometry(radius, height, 6); break;
-                case 'cone': geometry = new THREE.ConeGeometry(radius, height, 32); break;
-                case 'prism3': geometry = new THREE.CylinderGeometry(1, 1, 2, 3); break;
-                case 'prism4': geometry = new THREE.CylinderGeometry(1, 1, 2, 4); break;
-                case 'prism5': geometry = new THREE.CylinderGeometry(1, 1, 2, 5); break;
-                case 'prism6': geometry = new THREE.CylinderGeometry(1, 1, 2, 6); break;
-                case 'cylinder': geometry = new THREE.CylinderGeometry(1, 1, 2, 32); break;
-                case 'cube': geometry = new THREE.BoxGeometry(2, 2, 2); break;
-                case 'box': geometry = new THREE.BoxGeometry(1.5, 3, 1); break;
-                default: geometry = new THREE.ConeGeometry(radius, height, 3);
+                // --- 角錐與圓錐 ---
+                case 'pyramid3': // 三角錐
+                    // ConeGeometry(radius, height, radialSegments)
+                    // radialSegments = 3 就是三角錐
+                    geometry = new THREE.ConeGeometry(radius, height, 3);
+                    break;
+                case 'pyramid4': // 四角錐
+                    geometry = new THREE.ConeGeometry(radius, height, 4);
+                    break;
+                case 'pyramid5': // 五角錐
+                    geometry = new THREE.ConeGeometry(radius, height, 5);
+                    break;
+                case 'pyramid6': // 六角錐
+                    geometry = new THREE.ConeGeometry(radius, height, 6);
+                    break;
+                case 'cone': // 圓錐
+                    geometry = new THREE.ConeGeometry(radius, height, 32); // 32段看起來像圓
+                    break;
+
+                // --- 角柱與圓柱 ---
+                case 'prism3': // 三角柱
+                    // CylinderGeometry(radiusTop, radiusBottom, height, radialSegments)
+                    geometry = new THREE.CylinderGeometry(1, 1, 2, 3);
+                    break;
+                case 'prism4': // 四角柱 (長得像長方體，但用柱體邏輯生成)
+                    geometry = new THREE.CylinderGeometry(1, 1, 2, 4);
+                    break;
+                case 'prism5': // 五角柱
+                    geometry = new THREE.CylinderGeometry(1, 1, 2, 5);
+                    break;
+                case 'prism6': // 六角柱
+                    geometry = new THREE.CylinderGeometry(1, 1, 2, 6);
+                    break;
+                case 'cylinder': // 圓柱
+                    geometry = new THREE.CylinderGeometry(1, 1, 2, 32);
+                    break;
+
+                // --- 方體 ---
+                case 'cube': // 正方體
+                    geometry = new THREE.BoxGeometry(2, 2, 2);
+                    break;
+                case 'box': // 長方體
+                    geometry = new THREE.BoxGeometry(1.5, 3, 1); // 寬, 高, 深
+                    break;
+                
+                default:
+                    geometry = new THREE.ConeGeometry(radius, height, 3);
             }
 
+            // 創建實體
             currentMesh = new THREE.Mesh(geometry, material);
             currentMesh.castShadow = true;
             currentMesh.receiveShadow = true;
 
+            // 創建邊框線
             const edges = new THREE.EdgesGeometry(geometry);
             currentWireframe = new THREE.LineSegments(edges, lineMaterial);
+            // 縮放一點點避免重疊閃爍
             currentWireframe.scale.set(1.001, 1.001, 1.001); 
             
+            // 組合
             currentMesh.add(currentWireframe);
             pivotGroup.add(currentMesh);
         }
 
+        // 初始載入三角錐
         createShape('pyramid3');
 
+        // 4. 監聽下拉選單變化
         const shapeSelect = document.getElementById('shape-select');
-        shapeSelect.addEventListener('change', (e) => createShape(e.target.value));
+        shapeSelect.addEventListener('change', (e) => {
+            createShape(e.target.value);
+            // 切換形狀時稍微重置一下旋轉，讓視覺更清楚，或者保持不變也可以
+            // 這裡選擇保持目前的旋轉角度，讓比較更直觀
+        });
 
+        // 5. 燈光與環境
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
         scene.add(ambientLight);
 
@@ -318,189 +286,22 @@
         gridHelper.position.y = -2;
         scene.add(gridHelper);
 
+        // 6. 控制器與動畫
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
         controls.minDistance = 2;
         controls.maxDistance = 20;
 
-        // ------------------------------------------------------------------
-        // Part 2: 手勢控制邏輯
-        // ------------------------------------------------------------------
-        
         let isAutoRotating = true;
-        let isGestureMode = false;
-        let hands = null;
-        let cameraObj = null;
-        const videoElement = document.getElementById('webcam-video');
-        const gestureStatus = document.getElementById('gesture-status');
-        
-        // 手勢旋轉速度變數
-        let gestureRotateX = 0;
-        let gestureRotateY = 0;
-
-        async function initHands() {
-            if (hands) return; // 已經初始化過了
-
-            document.getElementById('loading-overlay').style.display = 'flex';
-
-            // MediaPipe Hands Config
-            hands = new Hands({locateFile: (file) => {
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-            }});
-
-            hands.setOptions({
-                maxNumHands: 1,
-                modelComplexity: 1,
-                minDetectionConfidence: 0.5,
-                minTrackingConfidence: 0.5
-            });
-
-            hands.onResults(onHandsResults);
-
-            // 初始化 Camera
-            cameraObj = new Camera(videoElement, {
-                onFrame: async () => {
-                    await hands.send({image: videoElement});
-                },
-                width: 320,
-                height: 240
-            });
-            
-            try {
-                await cameraObj.start();
-                document.getElementById('loading-overlay').style.display = 'none';
-                document.getElementById('webcam-container').style.display = 'block';
-                isGestureMode = true;
-                updateGestureButtonUI();
-                stopAutoRotate(); // 開啟手勢時關閉自動旋轉
-            } catch (err) {
-                console.error("相機啟動失敗", err);
-                alert("無法啟動相機，請確認瀏覽器權限。");
-                document.getElementById('loading-overlay').style.display = 'none';
-                isGestureMode = false;
-            }
-        }
-
-        function onHandsResults(results) {
-            if (!isGestureMode) return;
-
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                const landmarks = results.multiHandLandmarks[0];
-                
-                // 取中指根部(9)作為基準點
-                const x = landmarks[9].x; 
-                const y = landmarks[9].y;
-
-                const centerX = 0.5;
-                const centerY = 0.5;
-                const threshold = 0.1;
-
-                let statusText = "";
-                
-                // 計算 X 軸偏移 (控制左右旋轉)
-                if (x < centerX - threshold) {
-                    gestureRotateY = 0.05; // 往左(數值小)，物體逆時針
-                    statusText += "向左轉 ";
-                } else if (x > centerX + threshold) {
-                    gestureRotateY = -0.05; // 往右(數值大)，物體順時針
-                    statusText += "向右轉 ";
-                } else {
-                    gestureRotateY = 0;
-                }
-
-                // 計算 Y 軸偏移 (控制上下旋轉)
-                if (y < centerY - threshold) {
-                    gestureRotateX = 0.05; // 往上
-                    statusText += "向上轉";
-                } else if (y > centerY + threshold) {
-                    gestureRotateX = -0.05; // 往下
-                    statusText += "向下轉";
-                } else {
-                    gestureRotateX = 0;
-                }
-
-                if (statusText === "") statusText = "保持不動";
-                gestureStatus.innerText = statusText;
-                gestureStatus.style.color = "#4ade80";
-
-            } else {
-                gestureRotateX = 0;
-                gestureRotateY = 0;
-                gestureStatus.innerText = "未偵測到手部";
-                gestureStatus.style.color = "#f87171";
-            }
-        }
-
-        function toggleGestureMode() {
-            if (!isGestureMode) {
-                initHands();
-            } else {
-                if (cameraObj) {
-                    document.getElementById('webcam-container').style.display = 'none';
-                    videoElement.pause();
-                    videoElement.srcObject.getTracks().forEach(t => t.stop());
-                    cameraObj = null;
-                    hands = null;
-                }
-                isGestureMode = false;
-                gestureRotateX = 0;
-                gestureRotateY = 0;
-                updateGestureButtonUI();
-                
-                isAutoRotating = true;
-                document.getElementById('btn-auto').style.color = '#facc15';
-            }
-        }
-
-        function updateGestureButtonUI() {
-            const btn = document.getElementById('btn-gesture-toggle');
-            const text = document.getElementById('gesture-btn-text');
-            if (isGestureMode) {
-                btn.classList.remove('bg-indigo-600/50', 'border-indigo-500');
-                btn.classList.add('bg-red-600/80', 'border-red-500', 'hover:bg-red-700');
-                text.innerText = "關閉手勢";
-            } else {
-                btn.classList.add('bg-indigo-600/50', 'border-indigo-500');
-                btn.classList.remove('bg-red-600/80', 'border-red-500', 'hover:bg-red-700');
-                text.innerText = "開啟手勢";
-            }
-        }
-
-        document.getElementById('btn-gesture-toggle').addEventListener('click', toggleGestureMode);
-
-        // ------------------------------------------------------------------
-        // Part 3: 動畫循環與核心旋轉邏輯 (修正部分)
-        // ------------------------------------------------------------------
-
-        // 核心旋轉函數：確保旋轉軸是相對於「螢幕/相機」的，而非物體自身的局部軸
-        function rotateObject(dx, dy) {
-            // dx: 水平旋轉量 (繞世界 Y 軸)
-            // dy: 垂直旋轉量 (繞相機右方軸)
-
-            // 1. 水平旋轉：繞著世界 Y 軸轉 (讓物體保持直立旋轉，不歪斜)
-            if (dx !== 0) {
-                pivotGroup.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), dx);
-            }
-
-            // 2. 垂直旋轉：繞著「相機的右方軸」轉 (解決視角偏移問題)
-            if (dy !== 0) {
-                // 取得目前相機的右方向量
-                const camRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-                // 使用 normalize 確保向量長度正確
-                pivotGroup.rotateOnWorldAxis(camRight.normalize(), dy);
-            }
-        }
 
         function animate() {
             requestAnimationFrame(animate);
 
-            if (isGestureMode) {
-                // 手勢模式：使用新的 View-Dependent 旋轉邏輯
-                rotateObject(gestureRotateY, gestureRotateX);
-            } else if (isAutoRotating) {
-                // 自動旋轉：稍微轉一點 Y 和 X
-                rotateObject(0.005, 0.001);
+            if (isAutoRotating) {
+                pivotGroup.rotation.y += 0.005;
+                // 減少一點 X 軸自動旋轉，讓形狀更容易辨識
+                pivotGroup.rotation.x += 0.001; 
             }
 
             controls.update();
@@ -514,27 +315,34 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // 停止自動旋轉
+        // 7. UI 按鈕事件 (保持原有功能)
+        const rotateStep = 0.15;
+        
+        // 封裝停止自動旋轉的邏輯
         function stopAutoRotate() {
             isAutoRotating = false;
             document.getElementById('btn-auto').style.color = '#9ca3af';
         }
 
-        const rotateStep = 0.15;
-        // 按鈕控制也改用 rotateObject 確保邏輯一致
-        // 左/右: 傳入 dx
-        document.getElementById('btn-left').addEventListener('click', () => { stopAutoRotate(); rotateObject(rotateStep, 0); });
-        document.getElementById('btn-right').addEventListener('click', () => { stopAutoRotate(); rotateObject(-rotateStep, 0); });
-        // 上/下: 傳入 dy
-        document.getElementById('btn-up').addEventListener('click', () => { stopAutoRotate(); rotateObject(0, rotateStep); });
-        document.getElementById('btn-down').addEventListener('click', () => { stopAutoRotate(); rotateObject(0, -rotateStep); });
+        document.getElementById('btn-left').addEventListener('click', () => {
+            stopAutoRotate();
+            pivotGroup.rotation.y -= rotateStep;
+        });
+        document.getElementById('btn-right').addEventListener('click', () => {
+            stopAutoRotate();
+            pivotGroup.rotation.y += rotateStep;
+        });
+        document.getElementById('btn-up').addEventListener('click', () => {
+            stopAutoRotate();
+            pivotGroup.rotation.x -= rotateStep;
+        });
+        document.getElementById('btn-down').addEventListener('click', () => {
+            stopAutoRotate();
+            pivotGroup.rotation.x += rotateStep;
+        });
 
         const btnAuto = document.getElementById('btn-auto');
         btnAuto.addEventListener('click', () => {
-            if (isGestureMode) {
-                alert("請先關閉手勢模式才能啟用自動旋轉");
-                return;
-            }
             isAutoRotating = !isAutoRotating;
             btnAuto.style.color = isAutoRotating ? '#facc15' : '#9ca3af';
         });
@@ -554,16 +362,13 @@
         document.getElementById('btn-reset').addEventListener('click', () => {
             camera.position.set(5, 4, 5);
             camera.lookAt(0, 0, 0);
+            pivotGroup.rotation.set(0, 0, 0);
             
-            // 重置物體旋轉 (使用 quaternion identity)
-            pivotGroup.quaternion.identity();
-            
-            if (!isGestureMode) {
-                isAutoRotating = true;
-                btnAuto.style.color = '#facc15';
-            }
-            
+            isAutoRotating = true;
+            btnAuto.style.color = '#facc15';
             controls.reset();
+            
+            // 重置選擇器回到預設值 (三角錐)
             shapeSelect.value = 'pyramid3';
             createShape('pyramid3');
         });
